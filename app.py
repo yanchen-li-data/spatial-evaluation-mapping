@@ -2827,7 +2827,7 @@ st.session_state.setdefault(
 
 st.session_state.setdefault(
     "convenience_territory_border",
-    False,
+    True,
 )
 
 
