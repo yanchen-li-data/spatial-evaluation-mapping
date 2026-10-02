@@ -78,8 +78,8 @@ CLOUD_CACHE_PATH = (
 # GitHub Releaseへアップロードするasset名は、
 # 下記の RELEASE_ASSET_NAME と完全に同じ名前にします。
 # ------------------------------------------------------------
-GITHUB_USERNAME = "YOUR_GITHUB_USERNAME"
-GITHUB_REPOSITORY = "convenience-streamlit"
+GITHUB_USERNAME = "yanchen-li-data"
+GITHUB_REPOSITORY = "spatial-evaluation-mapping"
 RELEASE_ASSET_NAME = "kikuna_runtime_cache_20260928.pkl"
 
 CACHE_URL = (
