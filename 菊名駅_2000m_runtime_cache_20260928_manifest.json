@@ -1,0 +1,46 @@
+{
+  "cache_file": "/content/drive/MyDrive/map/vscode_handoff/菊名駅_2000m_runtime_cache_20260928.pkl",
+  "cache_size_mb": 287.081,
+  "created_or_checked_at": "2026-09-28T05:30:42.049993+00:00",
+  "python": {
+    "version": "3.13.15",
+    "implementation": "CPython"
+  },
+  "packages": {
+    "numpy": "2.1.3",
+    "pandas": "2.2.3",
+    "geopandas": "1.1.4",
+    "networkx": "3.6.1",
+    "osmnx": "2.1.1",
+    "scipy": "1.16.3",
+    "shapely": "2.1.2",
+    "folium": "0.20.0"
+  },
+  "analysis": {
+    "center_lat": 35.5097,
+    "center_lon": 139.6306,
+    "search_dist_m": 2000
+  },
+  "counts": {
+    "road_nodes": 7507,
+    "road_edges": 20796,
+    "buildings": 25259,
+    "highways": 8488,
+    "signals": 148,
+    "click_popups": 14400,
+    "grid_context": 14400,
+    "convenience_stores": 75
+  },
+  "runtime_keys": [
+    "G",
+    "_cache_meta",
+    "analysis_boundary",
+    "conv_lambda",
+    "convenience_stores",
+    "existing_territory_geojson",
+    "grid_context",
+    "layers",
+    "sim_results",
+    "step1_voronoi"
+  ]
+}
