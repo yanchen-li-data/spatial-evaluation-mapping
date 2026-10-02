@@ -24,8 +24,8 @@ import json
 import pickle
 import time
 import tempfile
-import shutil
-from urllib.request import Request, urlopen
+
+import requests
 
 import numpy as np
 import pandas as pd
@@ -73,7 +73,7 @@ CLOUD_CACHE_PATH = (
 #
 # GitHub Repository / Releaseを作成した後、
 # GITHUB_USERNAME と、必要に応じて GITHUB_REPOSITORY を
-# 実際の値へ変更。
+# 実際の値へ変更してください。
 #
 # GitHub Releaseへアップロードするasset名は、
 # 下記の RELEASE_ASSET_NAME と完全に同じ名前にします。
@@ -105,7 +105,7 @@ def resolve_cache_path():
 
     Streamlit Community Cloud:
         Repository内にruntime cacheが存在しない場合、
-        GitHub Releaseからassetをダウンロードし、
+        GitHub Releaseからrequestsのストリーミング方式で取得し、
         OSの一時フォルダへ保存して使用する。
 
     これにより、同じapp.pyを
@@ -119,22 +119,22 @@ def resolve_cache_path():
         return LOCAL_CACHE_PATH
 
     # --------------------------------------------------------
-    # 2. Cloud上ですでにダウンロード済みの場合
+    # 2. Cloud上ですでに正常なcacheを取得済みの場合
     # --------------------------------------------------------
-    if CLOUD_CACHE_PATH.exists():
+    if (
+        CLOUD_CACHE_PATH.exists()
+        and CLOUD_CACHE_PATH.stat().st_size > 0
+    ):
         return CLOUD_CACHE_PATH
+
+    # 0 byteの不完全ファイルが残っている場合は削除
+    if CLOUD_CACHE_PATH.exists():
+        CLOUD_CACHE_PATH.unlink()
 
     # --------------------------------------------------------
     # 3. Cloud初回起動:
-    #    GitHub Releaseからruntime cacheをダウンロード
+    #    GitHub Releaseからruntime cacheをストリーミング取得
     # --------------------------------------------------------
-    if GITHUB_USERNAME == "YOUR_GITHUB_USERNAME":
-        raise RuntimeError(
-            "GitHub Releaseの設定が未完了です。"
-            "app.py上部の GITHUB_USERNAME を、"
-            "実際のGitHubユーザー名へ変更してください。"
-        )
-
     partial_path = Path(
         str(CLOUD_CACHE_PATH) + ".part"
     )
@@ -144,36 +144,59 @@ def resolve_cache_path():
         partial_path.unlink()
 
     try:
-        request = Request(
+        with requests.get(
             CACHE_URL,
+            stream=True,
+            timeout=(30, 600),
+            allow_redirects=True,
             headers={
-                "User-Agent": "Streamlit-Community-Cloud-App",
-                "Accept": "application/octet-stream",
+                "User-Agent":
+                    "Mozilla/5.0 Streamlit-Community-Cloud",
+                "Accept":
+                    "application/octet-stream",
             },
-        )
-
-        with urlopen(
-            request,
-            timeout=600,
         ) as response:
-            with partial_path.open("wb") as f:
-                shutil.copyfileobj(
-                    response,
-                    f,
-                    length=1024 * 1024,
-                )
 
-        # 空ファイル等を簡易チェック
-        if (
-            not partial_path.exists()
-            or partial_path.stat().st_size == 0
-        ):
+            # 403 / 404 / 5xx 等をここで検出
+            response.raise_for_status()
+
+            with partial_path.open("wb") as f:
+                for chunk in response.iter_content(
+                    chunk_size=1024 * 1024
+                ):
+                    if chunk:
+                        f.write(chunk)
+
+        # ----------------------------------------------------
+        # ダウンロード結果チェック
+        # ----------------------------------------------------
+        if not partial_path.exists():
             raise RuntimeError(
-                "runtime cacheのダウンロード結果が空です。"
+                "runtime cacheファイルが作成されませんでした。"
             )
 
-        # 完了後のみ正式ファイル名へ変更することで、
-        # 途中ファイルを誤ってpickle.loadしないようにする。
+        downloaded_size = (
+            partial_path.stat().st_size
+        )
+
+        if downloaded_size == 0:
+            raise RuntimeError(
+                "runtime cacheのダウンロード結果が0 byteです。"
+            )
+
+        # 現在のcacheは約287MB。
+        # HTMLエラーページ等を誤って保存した場合も検出できるよう、
+        # 100MB未満なら異常として停止する。
+        if downloaded_size < 100 * 1024 * 1024:
+            raise RuntimeError(
+                "runtime cacheのダウンロードサイズが"
+                "想定より小さすぎます。 "
+                f"取得サイズ: "
+                f"{downloaded_size / 1024 / 1024:.1f} MB"
+            )
+
+        # ダウンロード完了後のみ正式名へ変更。
+        # 途中ファイルをpickle.loadしないようにする。
         partial_path.replace(
             CLOUD_CACHE_PATH
         )
